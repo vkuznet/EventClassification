@@ -25,6 +25,7 @@ import argparse
 
 # import numpy
 import numpy as np
+np.random.seed(123)
 
 # import matplotlib
 import matplotlib
@@ -198,6 +199,9 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1, 
     try: # TPU detection
         tpu = tf.contrib.cluster_resolver.TPUClusterResolver() # Picks up a connected TPU on Google's Colab, ML Engine, Kubernetes and Deep Learning VMs accessed through the 'ctpu up' utility
       #tpu = tf.contrib.cluster_resolver.TPUClusterResolver('MY_TPU_NAME') # If auto-detection does not work, you can pass the name of the TPU explicitly (tip: on a VM created with "ctpu up" the TPU has the same name as the VM)
+        print('')
+        print('### Training on TPU ###')
+        print('')
     except ValueError:
         print('Training on GPU/CPU')
         # printout how our session is configured
@@ -274,15 +278,16 @@ def main():
     dropout = float(opts.dropout)
     fout = opts.fout
     steps = int(opts.steps)
+    print("{}\n".format(' '.join(sys.argv)))
     print("Input parameters")
-    print("fdir {}".format(fdir))
-    print("batch_size {}".format(batch_size))
+    print("fdir        {}".format(fdir))
+    print("batch_size  {}".format(batch_size))
     print("image_shape {}".format(image_shape))
-    print("classes {}".format(classes))
-    print("epochs {}".format(epochs))
-    print("dropout {}".format(dropout))
-    print("fout {}".format(fout))
-    print("steps {}".format(steps))
+    print("classes     {}".format(classes))
+    print("epochs      {}".format(epochs))
+    print("dropout     {}".format(dropout))
+    print("fout        {}".format(fout))
+    print("steps       {}".format(steps))
     if not classes:
         print("please setup number of trained classes")
         sys.exit(1)
