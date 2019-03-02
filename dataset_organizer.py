@@ -44,55 +44,60 @@ def main():
         categories (n strings) - optional, strings of folder names we will consider a class when organizig data
     """
 
-    categories = os.listdir(args.PATH)
-    classes    = os.listdir(args.PATH)
+    apath = args.PATH
+    if not apath.endswith('/'):
+        apath += '/'
+    categories = os.listdir(apath)
+    classes    = os.listdir(apath)
     if args.categories:
         categories = args.categories
 
 
     print("Organizing DataSet")
-    create_folders(categories,args.PATH)
+    create_folders(categories,apath)
     print("Created Folders")
     if args.balanced==True:
         #calculating smallest file numbers for balanced dataset
         smallest = math.inf
         for class_ in classes:
-            smallest =  min(smallest,len(os.listdir(args.PATH+class_)))
+            smallest =  min(smallest,len(os.listdir(apath+class_)))
         train_numb,valid_numb,test_numb = split_numbs_help(smallest,args.train_percent,args.valid_percent,args.test_percent)
 
         #determining if other is in dataset so we can have balanced other dataset
         divisor = sum(class_ not in categories for class_ in classes)
         for class_ in classes:
             if class_ in categories:
-                partition_class(class_,class_,train_numb,valid_numb,test_numb,args.PATH)
+                partition_class(class_,class_,train_numb,valid_numb,test_numb,apath)
             if "other" in categories and (class_ not in categories):
-                partition_class(class_,"other",train_numb/divisor,valid_numb/divisor,test_numb/divisor,args.PATH)
+                partition_class(class_,"other",train_numb/divisor,valid_numb/divisor,test_numb/divisor,apath)
 
             print("Organized "+class_)
-            print(class_+" has "+str(len(os.listdir(args.PATH + class_))) +" files left after organizing")
+            print(class_+" has "+str(len(os.listdir(apath + class_))) +" files left after organizing")
 
     if args.balanced!=True:
         for class_ in classes:
-            total_files = len(os.listdir(args.PATH+class_))
+            total_files = len(os.listdir(apath+class_))
             train_numb,valid_numb,test_numb = split_numbs_help(total_files,args.train_percent,args.valid_percent,args.test_percent)
             if class_ in categories:
-                partition_class(class_,class_,train_numb,valid_numb,test_numb,args.PATH)
+                partition_class(class_,class_,train_numb,valid_numb,test_numb,apath)
             if "other" in categories and (class_ not in categories):
-                partition_class(class_,"other",train_numb,valid_numb,test_numb,args.PATH)
+                partition_class(class_,"other",train_numb,valid_numb,test_numb,apath)
 
             print("Organized "+class_)
-            print(class_+" has "+str(len(os.listdir(args.PATH + class_))) +" files left after organizing")
+            print(class_+" has "+str(len(os.listdir(apath + class_))) +" files left after organizing")
 
     if args.delete_excess:
         for class_ in classes:
-            sp.call("rm -r "+args.PATH+class_ , shell=True)
+            sp.call("rm -r "+apath+class_ , shell=True)
 
 
 
 
 split = ["train/","valid/","test/"]
 def create_folders(categories,PATH):
-    for folder in split[:2]:
+    # VK changes
+#    for folder in split[:2]:
+    for folder in split:
         sp.call("mkdir "+PATH+folder,shell=True)
         for category in categories:
             sp.call("mkdir "+PATH+folder+category+"/",shell=True)
@@ -114,13 +119,15 @@ def partition_class(class_,category,train_numb,valid_numb,test_numb,PATH):
     shuffle(files)
     for f in files:
         if train_numb>0:
-            shutil.move(PATH+class_+"/"+f,PATH+'train/'+category+"/"+f)
+            shutil.copy(PATH+class_+"/"+f,PATH+'train/'+category+"/"+f)
             train_numb-=1
         elif valid_numb>0:
-            shutil.move(PATH+class_+"/"+f,PATH+'valid/'+category+"/"+f)
+            shutil.copy(PATH+class_+"/"+f,PATH+'valid/'+category+"/"+f)
             valid_numb-=1
         elif test_numb>0:
-            shutil.move(PATH+class_+"/"+f,PATH+'test/'+f)
+#            shutil.copy(PATH+class_+"/"+f,PATH+'test/'+f)
+            # VK changes
+            shutil.copy(PATH+class_+"/"+f,PATH+'test/'+category+"/"+f)
             test_numb-=1
         else:
             break
