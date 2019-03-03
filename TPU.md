@@ -59,7 +59,7 @@ export PYTHONPATH=/usr/local/lib/python2.7/dist-packages:$PYTHONPATH
 
 ##### test run
 ./keras_ds.py
-echo "./keras_dn.py --fdir=dataset300 --classes=2 --epochs=1 --dropout=0.5 --fout=keras --batch_size=20 --steps=100"
+echo "./keras_dn.py --fdir=dataset300 --classes=2 --epochs=1 --dropout=0.5 --fout=keras --batch_size=20 --steps=10 --test"
 
 ##### full run
 #nohup ./keras_dn.py --fdir=dataset300 --classes=2 --epochs=10 --dropout=0.5 --fout=keras --batch_size=20 --steps=19000 2>&1 1>& log < /dev/null &
