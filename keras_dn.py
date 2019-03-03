@@ -10,6 +10,12 @@ Description:
     https://github.com/tensorflow/tpu/blob/master/tools/colab/keras_mnist_tpu.ipynb
     and, on Keras DenseNet package:
     https://github.com/titu1994/DenseNet
+
+Additional resouces for TPU and TF datasets:
+    https://www.tensorflow.org/guide/using_tpu
+    https://www.tensorflow.org/guide/performance/datasets
+    https://www.tensorflow.org/api_docs/python/tf/data/Dataset
+    https://github.com/tensorflow/models/blob/master/official/mnist/mnist_tpu.py
 """
 
 # system modules
@@ -42,6 +48,10 @@ import tf_densenet as densenet
 
 # import tensorflow
 import tensorflow as tf
+
+# global variables
+TPU = None
+IMG_SHAPE = None
 
 class OptionParser():
     def __init__(self):
@@ -118,7 +128,7 @@ def parse_fn(filename, label):
     image_decoded = tf.image.decode_image(image_string)
     image = tf.cast(image_decoded, tf.float32)
     # https://github.com/tensorflow/tensorflow/issues/16052
-    image.set_shape([300,300,3])
+    image.set_shape(list(IMG_SHAPE))
     label.set_shape([None, ])
     return image, label
 
@@ -156,7 +166,7 @@ def get_labels(fdir):
     _, labels = get_files_labels(fdir)
     return labels
 
-def get_dataset(fdir, batch_size, img_shape, classes, shuffle=False, cache=False):
+def get_dataset(fdir, batch_size, img_shape, classes, shuffle=False, cache=False, tpu=False):
     files, labels = get_files_labels(fdir)
     print("input directory: {}".format(fdir))
     print("total files {}, total labels {}".format(len(files), len(labels)))
@@ -169,7 +179,13 @@ def get_dataset(fdir, batch_size, img_shape, classes, shuffle=False, cache=False
         dataset = dataset.cache()
     if shuffle:
         dataset = dataset.shuffle(len(files), reshuffle_each_iteration=True)
-    dataset = dataset.map(parse_fn)
+    if tpu:
+        # for TPU it is important to delivery data fast, we need to choose
+        # number of parallel calls appropriately, see
+        # https://www.tensorflow.org/guide/performance/datasets
+        dataset = dataset.map(parse_fn, num_parallel_calls=10)
+    else:
+        dataset = dataset.map(parse_fn)
     # drop_remainder is important on TPU, batch size must be fixed
     dataset = dataset.batch(batch_size, drop_remainder=True)
     dataset = dataset.repeat() # Mandatory for Keras for now
@@ -230,8 +246,10 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
 
     if tpu: # TPU training
         # For TPU, we will need a function that returns the dataset
-        training_input_fn = lambda: get_dataset(train_dir, batch_size, image_shape, classes)
-        validation_input_fn = lambda: get_dataset(valid_dir, batch_size, image_shape, classes)
+        training_input_fn = lambda: get_dataset(train_dir, batch_size,
+                image_shape, classes, tpu=True)
+        validation_input_fn = lambda: get_dataset(valid_dir, batch_size,
+                image_shape, classes, tpu=True)
 
         strategy = tf.contrib.tpu.TPUDistributionStrategy(tpu)
         trained_model = tf.contrib.tpu.keras_to_tpu_model(model, strategy=strategy)
@@ -270,7 +288,11 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
         if not steps:
             steps = 1
         if tpu:
-            input_fn = lambda: get_dataset(tdir, batch_size, image_shape, classes)
+            # so far predictions does not work on TPU I need to figure
+            # out what to pass to predict method, and goal here is to train
+            # the model which later can be used for inference
+            return
+            input_fn = lambda: get_dataset(tdir, batch_size, image_shape, classes, tpu=True)
             probs = trained_model.predict(input_fn, steps=steps)
         else:
             probs = trained_model.predict(tdataset, steps=steps)
@@ -296,6 +318,7 @@ def main():
         sys.exit(1)
     batch_size = int(opts.batch_size)
     image_shape = tuple([int(s) for s in opts.image_shape.split(',')])
+    IMG_SHAPE = image_shape
     classes = int(opts.classes)
     epochs = int(opts.epochs)
     dropout = float(opts.dropout)
