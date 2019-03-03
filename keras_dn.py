@@ -63,6 +63,8 @@ class OptionParser():
             dest="epochs", default=10, help="Number of epochs, default 10")
         self.parser.add_argument("--steps", action="store",
             dest="steps", default=0, help="Number of steps per epoch, default 0")
+        self.parser.add_argument("--test", action="store_true",
+            dest="test", default=False, help="use test DenseNet model")
         self.parser.add_argument("--verbose", action="store_true",
             dest="verbose", default=False, help="verbose output")
 
@@ -154,7 +156,7 @@ def get_labels(fdir):
     _, labels = get_files_labels(fdir)
     return labels
 
-def get_dataset(fdir, batch_size, img_shape, classes, shuffle=True, cache=False):
+def get_dataset(fdir, batch_size, img_shape, classes, shuffle=False, cache=False):
     files, labels = get_files_labels(fdir)
     print("input directory: {}".format(fdir))
     print("total files {}, total labels {}".format(len(files), len(labels)))
@@ -174,7 +176,8 @@ def get_dataset(fdir, batch_size, img_shape, classes, shuffle=True, cache=False)
     dataset = dataset.prefetch(batch_size)  # fetch next batches while training on the current one
     return dataset
 
-def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1, steps_per_epoch=None):
+def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
+        steps_per_epoch=None, is_test=False):
 
     # input parameters
     train_dir = os.path.join(fdir, 'train')
@@ -185,10 +188,13 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1, 
     tpu = None
 
     # build and train model
-    model = densenet.DenseNetImageNet161(input_shape=image_shape,
-            classes=classes,  dropout_rate=dropout, weights=None)
-#    model = densenet.DenseNet(input_shape=image_shape,
-#            classes=classes,  dropout_rate=dropout, weights=None)
+    if is_test:
+        # for testing use very small DenseNet which is defined by depth parameter
+        model = densenet.DenseNet(input_shape=image_shape, depth=10,
+                classes=classes,  dropout_rate=dropout, weights=None)
+    else:
+        model = densenet.DenseNetImageNet161(input_shape=image_shape,
+                classes=classes,  dropout_rate=dropout, weights=None)
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     trained_model = model
 
@@ -203,7 +209,7 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1, 
     training_dataset = get_dataset(train_dir, batch_size, image_shape, classes)
     validation_dataset = get_dataset(valid_dir, batch_size, image_shape, classes)
     # test_dataset we'll use in prediction there is no need to shuffle it
-    test_dataset = get_dataset(test_dir, batch_size, image_shape, classes, shuffle=False)
+    test_dataset = get_dataset(test_dir, batch_size, image_shape, classes)
 
     try: # TPU detection
         # Picks up a connected TPU on Google's Colab, ML Engine, Kubernetes
@@ -257,13 +263,17 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1, 
 
         # choose which dataset/labels we'll use to test our predictions
         # we can use either valid or test datasets
-#        tdir = valid_dir
-#        tdataset = validation_dataset
         tdir = test_dir
         tdataset = test_dataset
         y_true = get_labels(tdir)
         steps = len(y_true)/batch_size
-        probs = model.predict(tdataset, steps=steps)
+        if not steps:
+            steps = 1
+        if tpu:
+            input_fn = lambda: tdataset
+            probs = trained_model.predict(input_fn, steps=steps)
+        else:
+            probs = trained_model.predict(tdataset, steps=steps)
         y_pred = np.argmax(probs, axis=1)
         print("probs", type(y_true), np.shape(y_true), type(y_pred), np.shape(y_pred))
         print("y_true", y_true[:10])
@@ -291,6 +301,7 @@ def main():
     dropout = float(opts.dropout)
     fout = opts.fout
     steps = int(opts.steps)
+    is_test = opts.test
     print("{}\n".format(' '.join(sys.argv)))
     print("Input parameters")
     print("fdir        {}".format(fdir))
@@ -305,7 +316,7 @@ def main():
         print("please setup number of trained classes")
         sys.exit(1)
     time0 = time.time()
-    train(fdir, batch_size, image_shape, classes, fout, epochs, dropout, steps)
+    train(fdir, batch_size, image_shape, classes, fout, epochs, dropout, steps, is_test)
     print("Elapsed time: {} sec".format(time.time()-time0))
 
 if __name__ == '__main__':
