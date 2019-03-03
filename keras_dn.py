@@ -270,7 +270,7 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
         if not steps:
             steps = 1
         if tpu:
-            input_fn = lambda: tdataset
+            input_fn = lambda: get_dataset(tdir, batch_size, image_shape, classes)
             probs = trained_model.predict(input_fn, steps=steps)
         else:
             probs = trained_model.predict(tdataset, steps=steps)
