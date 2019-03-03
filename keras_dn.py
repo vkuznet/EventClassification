@@ -50,7 +50,6 @@ import tf_densenet as densenet
 import tensorflow as tf
 
 # global variables
-TPU = None
 IMG_SHAPE = None
 
 class OptionParser():
@@ -128,6 +127,7 @@ def parse_fn(filename, label):
     image_decoded = tf.image.decode_image(image_string)
     image = tf.cast(image_decoded, tf.float32)
     # https://github.com/tensorflow/tensorflow/issues/16052
+    global IMG_SHAPE
     image.set_shape(list(IMG_SHAPE))
     label.set_shape([None, ])
     return image, label
@@ -318,6 +318,7 @@ def main():
         sys.exit(1)
     batch_size = int(opts.batch_size)
     image_shape = tuple([int(s) for s in opts.image_shape.split(',')])
+    global IMG_SHAPE
     IMG_SHAPE = image_shape
     classes = int(opts.classes)
     epochs = int(opts.epochs)
