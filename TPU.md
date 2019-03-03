@@ -18,8 +18,12 @@ rm dataset300_test.tar.gz
 # first I need to create storage bucket at
 # https://console.cloud.google.com/storage/browser
 export STORAGE_BUCKET=gs://dataset300
+
+# for small datasets
 gsutil cp -r dataset300_test/* ${STORAGE_BUCKET}
-#gsutil -m cp -r dataset300_test/* ${STORAGE_BUCKET}
+
+# for large datasets
+gsutil -m cp -r dataset300_test/* ${STORAGE_BUCKET}
 
 # download and install conda
 curl -L -O https://repo.anaconda.com/archive/Anaconda2-2018.12-Linux-x86_64.sh
@@ -47,14 +51,15 @@ git clone https://github.com/vkuznet/Particle-Discovery.git
 export PYTHONPATH=$PWD/Particle-Discovery:$PYTHONPATH:$PWD/DenseNet
 
 cd Particle-Discovery
+
 # reset PYTHONPATH to TPU tf
 export PYTHONPATH=/usr/local/lib/python2.7/dist-packages:$PYTHONPATH
 
 # test run
-echo "./keras_dn.py --fdir=${STORAGE_BUCKET}/dataset300_test --classes=2 --epochs=1 --dropout=0.5 --fout=keras --batch_size=20 --steps=100"
+echo "./keras_dn.py --fdir=dataset300 --classes=2 --epochs=1 --dropout=0.5 --fout=keras --batch_size=20 --steps=100"
 
 # full run
-#nohup ./keras_dn.py --fdir=${STORAGE_BUCKET}/dataset300_test --classes=2 --epochs=10 --dropout=0.5 --fout=keras --batch_size=20 --steps=19000 2>&1 1>& log < /dev/null &
+#nohup ./keras_dn.py --fdir=dataset300 --classes=2 --epochs=10 --dropout=0.5 --fout=keras --batch_size=20 --steps=19000 2>&1 1>& log < /dev/null &
 
 ### IMPORTANT:
 # by the end of work disable TPUs

@@ -19,7 +19,7 @@ from tensorflow.keras.layers import GlobalAveragePooling2D
 from tensorflow.keras.layers import Input
 from tensorflow.keras.layers import concatenate
 from tensorflow.keras.layers import BatchNormalization
-from keras.regularizers import l2
+from tensorflow.keras.regularizers import l2
 from keras.utils.layer_utils import convert_all_kernels_in_model, convert_dense_weights_data_format
 from keras.utils.data_utils import get_file
 from keras.engine.topology import get_source_inputs

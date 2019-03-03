@@ -206,13 +206,15 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1, 
     test_dataset = get_dataset(test_dir, batch_size, image_shape, classes, shuffle=False)
 
     try: # TPU detection
-        tpu = tf.contrib.cluster_resolver.TPUClusterResolver() # Picks up a connected TPU on Google's Colab, ML Engine, Kubernetes and Deep Learning VMs accessed through the 'ctpu up' utility
-      #tpu = tf.contrib.cluster_resolver.TPUClusterResolver('MY_TPU_NAME') # If auto-detection does not work, you can pass the name of the TPU explicitly (tip: on a VM created with "ctpu up" the TPU has the same name as the VM)
-        print('')
+        # Picks up a connected TPU on Google's Colab, ML Engine, Kubernetes
+        # and Deep Learning VMs accessed through the 'ctpu up' utility
+        tpu = tf.contrib.cluster_resolver.TPUClusterResolver()
+        # If auto-detection does not work, you can pass the name of the TPU explicitly
+        # on a VM created with "ctpu up" the TPU has the same name as the VM
+#        tpu = tf.contrib.cluster_resolver.TPUClusterResolver('MY_TPU_NAME')
         print('### Training on TPU ###')
-        print('')
     except ValueError:
-        print('Training on GPU/CPU')
+        print('### Training on GPU/CPU ###')
         # printout how our session is configured
 #        sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
 

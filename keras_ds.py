@@ -2,7 +2,6 @@
 import numpy as np
 import tensorflow as tf
 import keras
-from keras import backend as KKK
 from tensorflow.keras import layers
 
 model = tf.keras.Sequential([
@@ -11,8 +10,7 @@ model = tf.keras.Sequential([
     layers.Dense(10, activation='softmax')])
 
 model.compile(optimizer=tf.train.AdamOptimizer(0.001),
-                      loss='categorical_crossentropy',
-                                    metrics=['accuracy'])
+                loss='categorical_crossentropy', metrics=['accuracy'])
 
 data = np.random.random((1000, 32))
 labels = np.random.random((1000, 10))
@@ -21,11 +19,22 @@ labels = np.random.random((1000, 10))
 dataset = tf.data.Dataset.from_tensor_slices((data, labels))
 dataset = dataset.batch(32)
 dataset = dataset.repeat()
+print("dataset", type(dataset), dataset)
 
-print("dataset", type(dataset), dataset, KKK.is_tensor(dataset))
-print("model.fit", type(model), type(model.fit), model.fit)
-print("instance", isinstance(model, keras.engine.training.Model))
+epochs = 2
+steps = 30
+vsteps = 1
 
-# Don't forget to specify `steps_per_epoch` when calling `fit` on a dataset.
-#model.fit(dataset, epochs=2, steps_per_epoch=30)
-model.fit(dataset, epochs=2, steps_per_epoch=30, validation_data=dataset, validation_steps=1)
+try: # TPU detection
+    tpu = tf.contrib.cluster_resolver.TPUClusterResolver()
+    print('### Training on TPU ###')
+    # For TPU, we will need a function that returns the dataset
+    ds_input_fn = lambda: dataset
+    strategy = tf.contrib.tpu.TPUDistributionStrategy(tpu)
+    trained_model = tf.contrib.tpu.keras_to_tpu_model(model, strategy=strategy)
+    trained_model.fit(ds_input_fn, epochs=epochs, steps_per_epoch=steps,
+            validation_data=ds_input_fn, validation_steps=vsteps)
+except ValueError:
+    print('### Training on GPU/CPU ###')
+    model.fit(dataset, epochs=epochs, steps_per_epoch=steps,
+            validation_data=dataset, validation_steps=vsteps)
