@@ -129,7 +129,16 @@ def get_files_labels(fdir):
             continue
         idir = os.path.join(fdir, sdir)
         if os.path.isdir(idir):
-            filenames = [os.path.join(idir, f) for f in os.listdir(idir)]
+            # if TPU or google cloud is present
+            if 'STORAGE_BUCKET' in os.environ:
+                tdir = idir.replace(fdir, os.environ['STORAGE_BUCKET'])
+                for sd in ['train', 'valid', 'test']:
+                    if sd in fdir:
+                        tdir = os.path.join(os.environ['STORAGE_BUCKET'], sd)
+                tdir = os.path.join(tdir, sdir)
+                filenames = [os.path.join(tdir, f) for f in os.listdir(idir)]
+            else:
+                filenames = [os.path.join(idir, f) for f in os.listdir(idir)]
             files += filenames
             labels += [idx]*len(filenames)
         else:
@@ -222,7 +231,9 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1, 
         # for Keras/TPU. Keras/TPU needs a function that returns a dataset.
         fit = trained_model.fit(training_input_fn,
                 steps_per_epoch=steps_per_epoch, epochs=epochs,
-                validation_data=validation_input_fn, validation_steps=1, callbacks=[lr_decay])
+                validation_data=validation_input_fn, validation_steps=1,
+                verbose=1,
+                callbacks=[lr_decay])
     else: # GPU/CPU training
         fit = trained_model.fit(training_dataset,
             steps_per_epoch=steps_per_epoch, epochs=epochs,
