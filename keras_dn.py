@@ -260,6 +260,7 @@ def parse_tfrec(example_proto):
     global NCLASSES
     label = tf.one_hot(label, NCLASSES)
     image = tf.decode_raw(parsed_features['image'], tf.uint8)
+    image = tf.cast(image, tf.float32) # cast to float32 on TPU
     image_shape = tf.stack([height, width, depth])
     image = tf.reshape(image, image_shape)
     # we still need to explicitly set shape of the image
