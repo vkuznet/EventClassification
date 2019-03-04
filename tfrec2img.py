@@ -30,27 +30,11 @@ def run(fname, fout):
     for string_record in record_iterator:
         example = tf.train.Example()
         example.ParseFromString(string_record)
-        
-        height = int(example.features.feature['height']
-                                     .int64_list
-                                     .value[0])
-        
-        width = int(example.features.feature['width']
-                                    .int64_list
-                                    .value[0])
-        
-        depth = int(example.features.feature['depth']
-                                    .int64_list
-                                    .value[0])
-        
-        label = (example.features.feature['label']
-                                    .int64_list
-                                    .value[0])
-        
-        img_string = (example.features.feature['image']
-                                      .bytes_list
-                                      .value[0])
-        
+        height = int(example.features.feature['height'].int64_list.value[0])
+        width = int(example.features.feature['width'].int64_list.value[0])
+        depth = int(example.features.feature['depth'].int64_list.value[0])
+        label = int(example.features.feature['label'].int64_list.value[0])
+        img_string = (example.features.feature['image'].bytes_list.value[0])
         img_1d = np.fromstring(img_string, dtype=np.uint8)
         rec_img = img_1d.reshape((height, width, depth))
         print('shape: ({},{},{}) label: {}'.format(height, width, depth, label))
