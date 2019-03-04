@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 #pylint: disable-msg=
 """
-File       : img_test.py
+File       : tfrec2img.py
 Author     : Valentin Kuznetsov <vkuznet AT gmail dot com>
 Description: 
 """
@@ -12,6 +12,7 @@ import os
 import sys
 import argparse
 
+# third party modules
 from PIL import Image
 import tensorflow as tf
 import numpy as np
@@ -26,6 +27,11 @@ class OptionParser():
             dest="fout", default="", help="Output file name for decoded image")
 
 def run(fname, fout):
+    """
+    Helper function which can decode given tfrecrods file and produce single
+    image and information about it. It is doing reverse operation from
+    img2tfrecs.py code
+    """
     record_iterator = tf.python_io.tf_record_iterator(path=fname)
     for string_record in record_iterator:
         example = tf.train.Example()
