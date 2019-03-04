@@ -177,7 +177,17 @@ def get_files_labels(fdir):
         else:
             # labels here is irrelevant since we assume files
             # contains all the information, e.g. tfrecords
-            files.append(idir)
+
+            # if TPU or google cloud is present
+            if 'STORAGE_BUCKET' in os.environ:
+                tdir = idir.replace(fdir, os.environ['STORAGE_BUCKET'])
+                for sd in ['train', 'valid', 'test']:
+                    if sd in fdir:
+                        tdir = os.path.join(os.environ['STORAGE_BUCKET'], sd)
+                tdir = os.path.join(tdir, sdir)
+                files.append(tdir)
+            else:
+                files.append(idir)
             labels.append(0)
     return files, labels
 
