@@ -10,9 +10,11 @@ gcloud config set compute/zone us-central1-f
 ctpu up -zone us-central1-f
 
 ##### download our data
-scp vek3@lnxcu9.lns.cornell.edu:/mnt/disk1/vk/dataset300_test.tar.gz .
+scp XXX@YYY:/mnt/disk1/vk/dataset300_test.tar.gz .
 tar xfz dataset300_test.tar.gz
 rm dataset300_test.tar.gz
+
+scp -r XXX@YYY:/mnt/disk1/vk/tfrecords .
 
 ##### copy our dataset to google storage
 ##### first I need to create storage bucket at
@@ -21,9 +23,11 @@ export STORAGE_BUCKET=gs://dataset300
 
 ##### for small datasets
 gsutil cp -r dataset300_test/* ${STORAGE_BUCKET}
+gsutil cp -r tfrecords ${STORAGE_BUCKET}
 
 ##### for large datasets
 gsutil -m cp -r dataset300_test/* ${STORAGE_BUCKET}
+gsutil -m cp -r tfrecords ${STORAGE_BUCKET}
 
 ##### download and install conda
 curl -L -O https://repo.anaconda.com/archive/Anaconda2-2018.12-Linux-x86_64.sh
