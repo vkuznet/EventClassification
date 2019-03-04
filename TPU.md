@@ -78,3 +78,10 @@ ctpu status -zone us-central1-f
 
 ##### delete storage bucket
 gsutil -m rm -r gs://dataset300/{train,valid,test}
+
+##### additional tools
+##### access VM with running TPU (vkuznet is a name of my VM)
+gcloud compute ssh vkuznet --ssh-flag=-L6006:localhost:6006
+
+##### run tpu profiler with different monitoring level (1, 2)
+capture_tpu_profile --tpu=vkuznet  --monitoring_level=1
