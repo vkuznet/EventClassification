@@ -42,14 +42,22 @@ class OptionParser():
             dest="verbose", default=False, help="verbose output")
 
 def _int64_feature(value):
+    "Helper function to convert given value into TF feature"
     if not isinstance(value, list):
         value = [value]
     return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
 def _bytes_feature(value):
+    "Helper function to convert given value into TF feature"
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 def get_files_labels(fdir):
+    """
+    Helper function to read files and labels from given directory. Here we
+    assume that fdir has some structure, e.g.
+    fdir/{train,valid,test}/{Sample1,Sample2}
+    the samples sub-directories should contain images.
+    """
     samples = [d for d in os.listdir(fdir) if not d.startswith('.')]
     files = []
     labels = []
