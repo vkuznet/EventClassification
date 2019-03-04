@@ -16,6 +16,9 @@ Additional resouces for TPU and TF datasets:
     https://www.tensorflow.org/guide/performance/datasets
     https://www.tensorflow.org/api_docs/python/tf/data/Dataset
     https://github.com/tensorflow/models/blob/master/official/mnist/mnist_tpu.py
+    https://www.tensorflow.org/guide/datasets
+    https://www.tensorflow.org/guide/performance/datasets
+    https://www.tensorflow.org/tutorials/load_data/tf_records
 """
 
 # system modules
@@ -51,6 +54,7 @@ import tensorflow as tf
 
 # global variables
 IMG_SHAPE = None
+NCLASSES = None
 
 class OptionParser():
     def __init__(self):
@@ -78,6 +82,7 @@ class OptionParser():
             dest="verbose", default=False, help="verbose output")
 
 def plot_roc_curve(fpr, tpr, fout, title='Keras'):
+    "Helper function to plot roc curve"
     auc = metrics.auc(fpr, tpr)
     fout = fout.split('.')[0]
     plt.figure()
@@ -91,6 +96,7 @@ def plot_roc_curve(fpr, tpr, fout, title='Keras'):
     plt.close()
 
 def plot_acc(epochs, history, fname):
+    "Helper function to plot trainining accuracies"
     acc_values = history['acc']
     plt.figure()
     plt.plot(epochs, history['acc'], label='Training accuracy')
@@ -102,6 +108,7 @@ def plot_acc(epochs, history, fname):
     plt.close()
 
 def plot_loss(epochs, history, fname):
+    "Helper function to plot training losses"
     plt.figure()
     plt.plot(epochs, history['loss'], label='Training loss')
     plt.plot(epochs, history['val_loss'], label='Validation loss')
@@ -111,9 +118,12 @@ def plot_loss(epochs, history, fname):
     plt.savefig('{}-loss.pdf'.format(fname))
     plt.close()
 
-def dataset_to_numpy(dataset, N=10):
+def dataset_to_numpy(dataset, nentries=10):
+    """
+    Helper function to return numpy representation of a TF dataset (images, labels)
+    """
     unbatched_ds = dataset.apply(tf.data.experimental.unbatch())
-    images, labels = unbatched_ds.batch(N).make_one_shot_iterator().get_next()
+    images, labels = unbatched_ds.batch(nentries).make_one_shot_iterator().get_next()
     # get one batch 
 #    images, labels = dataset.make_one_shot_iterator().get_next()
   
@@ -123,9 +133,11 @@ def dataset_to_numpy(dataset, N=10):
     return data, classes
 
 def parse_fn(filename, label):
+    "Helper function to return image and label from given file/label pair"
     image_string = tf.read_file(filename, "file_reader")
     image_decoded = tf.image.decode_image(image_string)
     image = tf.cast(image_decoded, tf.float32)
+    # we still need to explicitly set shape of the image
     # https://github.com/tensorflow/tensorflow/issues/16052
     global IMG_SHAPE
     image.set_shape(list(IMG_SHAPE))
@@ -133,6 +145,15 @@ def parse_fn(filename, label):
     return image, label
 
 def get_files_labels(fdir):
+    """
+    Helper function to return files and labels from given input directory.
+    It can read either fdir/{train,test,valid}/{Sample1,Sample2}
+    structure or fdir/{train,test,valid}/*.tfrecords
+
+    It also takes care to replace fdir with proper STORAGE_BUCKET
+    environment value (if it is set) which is useful when working on
+    Google Cloud platform which requires to read data from Google Storage.
+    """
     samples = [d for d in os.listdir(fdir) if not d.startswith('.')]
     files = []
     labels = []
@@ -154,24 +175,39 @@ def get_files_labels(fdir):
             files += filenames
             labels += [idx]*len(filenames)
         else:
+            # labels here is irrelevant since we assume files
+            # contains all the information, e.g. tfrecords
             files.append(idir)
             labels.append(0)
     return files, labels
 
 def ds_dim(fdir):
+    "Helper function to return dimension of dataset (total number of files)"
     files, _ = get_files_labels(fdir)
     return len(files)
 
 def get_labels(fdir):
+    "Helper function to get labels from given input directory of images"
     _, labels = get_files_labels(fdir)
     return labels
 
-def get_dataset(fdir, batch_size, img_shape, classes, shuffle=False, cache=False, tpu=False):
+def get_dataset(fdir, batch_size, shuffle=False, cache=False, tpu=False):
+    """
+    Top level function to create TF dataset from given input directory.
+    This directory can either contain images or tfrecords files
+    """
     files, labels = get_files_labels(fdir)
     print("input directory: {}".format(fdir))
     print("total files {}, total labels {}".format(len(files), len(labels)))
     print("one file {} and label {}".format(files[0], labels[0]))
-    labels = tf.keras.utils.to_categorical(labels, num_classes=classes)
+    if files[0].endswith('tfrecords'):
+        return get_tfrecords(files, batch_size, shuffle, cache, tpu)
+    return get_dataset_img(files, labels, batch_size, shuffle, cache, tpu)
+
+def get_dataset_img(files, labels, batch_size, shuffle=False, cache=False, tpu=False):
+    "Helper function to create TF dataset from given set of files and labels"
+    global NCLASSES
+    labels = tf.keras.utils.to_categorical(labels, num_classes=NCLASSES)
     images = tf.convert_to_tensor(files)
     dataset = tf.data.Dataset.from_tensor_slices((images, labels))
     if cache:
@@ -192,8 +228,66 @@ def get_dataset(fdir, batch_size, img_shape, classes, shuffle=False, cache=False
     dataset = dataset.prefetch(batch_size)  # fetch next batches while training on the current one
     return dataset
 
+def parse_tfrec(example_proto):
+    """
+    Helper function to parse tfrecords (see img2tfrecs.py which creates them
+    from images). We assume that tfrecords provides the image parameters
+    and label.
+    """
+    features={
+        'height': tf.FixedLenFeature([], tf.int64, default_value=IMG_SHAPE[0]),
+        'width': tf.FixedLenFeature([], tf.int64, default_value=IMG_SHAPE[1]),
+        'depth': tf.FixedLenFeature([], tf.int64, default_value=IMG_SHAPE[2]),
+        'label': tf.FixedLenFeature([], tf.int64, default_value=0),
+        'image': tf.FixedLenFeature([], tf.string, default_value=''),
+        }
+    parsed_features = tf.parse_single_example(example_proto, features)
+    height = tf.cast(parsed_features['height'], tf.int32)
+    width = tf.cast(parsed_features['width'], tf.int32)
+    depth = tf.cast(parsed_features['depth'], tf.int32)
+    label = tf.cast(parsed_features['label'], tf.int32)
+    # convert label numerical value into categorical vector based on NCLASSES
+    global NCLASSES
+    label = tf.one_hot(label, NCLASSES)
+    image = tf.decode_raw(parsed_features['image'], tf.uint8)
+    image_shape = tf.stack([height, width, depth])
+    image = tf.reshape(image, image_shape)
+    # we still need to explicitly set shape of the image
+    # https://github.com/tensorflow/tensorflow/issues/16052
+    image.set_shape(list(IMG_SHAPE))
+    return image, label
+
+def get_tfrecords(files, batch_size, shuffle=False, cache=False, tpu=False):
+    """
+    Helper function which allows to read tfrecords input files and return
+    TF dataset which contains images and labels. The labels are converted
+    from numerical values to categorical vector.
+    """
+    dataset = tf.data.TFRecordDataset(files)
+    if cache:
+        # this small dataset can be entirely cached in RAM, for TPU this is important
+        dataset = dataset.cache()
+    if shuffle:
+        dataset = dataset.shuffle(len(files), reshuffle_each_iteration=True)
+    if tpu:
+        # for TPU it is important to delivery data fast, we need to choose
+        # number of parallel calls appropriately, see
+        # https://www.tensorflow.org/guide/performance/datasets
+        dataset = dataset.map(parse_tfrec, num_parallel_calls=10)
+    else:
+        dataset = dataset.map(parse_tfrec)
+    # drop_remainder is important on TPU, batch size must be fixed
+    dataset = dataset.batch(batch_size, drop_remainder=True)
+    dataset = dataset.repeat() # Mandatory for Keras for now
+    dataset = dataset.prefetch(batch_size)  # fetch next batches while training on the current one
+    return dataset
+
 def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
         steps_per_epoch=None, is_test=False):
+    """
+    Main function which does the training of our ML model either from
+    images or tfrecords from provided input directory fdir.
+    """
 
     # input parameters
     train_dir = os.path.join(fdir, 'train')
@@ -224,7 +318,6 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
 
     training_dataset = get_dataset(train_dir, batch_size, image_shape, classes)
     validation_dataset = get_dataset(valid_dir, batch_size, image_shape, classes)
-    # test_dataset we'll use in prediction there is no need to shuffle it
     test_dataset = get_dataset(test_dir, batch_size, image_shape, classes)
 
     try: # TPU detection
@@ -321,6 +414,8 @@ def main():
     global IMG_SHAPE
     IMG_SHAPE = image_shape
     classes = int(opts.classes)
+    global NCLASSES
+    NCLASSES = classes
     epochs = int(opts.epochs)
     dropout = float(opts.dropout)
     fout = opts.fout
