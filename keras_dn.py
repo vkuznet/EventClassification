@@ -78,6 +78,8 @@ class OptionParser():
             dest="steps", default=0, help="Number of steps per epoch, default 0")
         self.parser.add_argument("--test", action="store_true",
             dest="test", default=False, help="use test DenseNet model")
+        self.parser.add_argument("--tpu", action="store_true",
+            dest="tpu", default="", help="tpu to connect")
         self.parser.add_argument("--verbose", action="store_true",
             dest="verbose", default=False, help="verbose output")
 
@@ -294,7 +296,7 @@ def get_tfrecords(files, batch_size, shuffle=False, cache=False, tpu=False):
     return dataset
 
 def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
-        steps_per_epoch=None, is_test=False):
+        steps_per_epoch=None, is_test=False, tpu_name=''):
     """
     Main function which does the training of our ML model either from
     images or tfrecords from provided input directory fdir.
@@ -334,10 +336,10 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
     try: # TPU detection
         # Picks up a connected TPU on Google's Colab, ML Engine, Kubernetes
         # and Deep Learning VMs accessed through the 'ctpu up' utility
-        tpu = tf.contrib.cluster_resolver.TPUClusterResolver()
-        # If auto-detection does not work, you can pass the name of the TPU explicitly
-        # on a VM created with "ctpu up" the TPU has the same name as the VM
-#        tpu = tf.contrib.cluster_resolver.TPUClusterResolver('MY_TPU_NAME')
+        if tpu_name:
+            tpu = tf.contrib.cluster_resolver.TPUClusterResolver(tpu_name)
+        else:
+            tpu = tf.contrib.cluster_resolver.TPUClusterResolver()
         print('### Training on TPU ###')
     except ValueError:
         print('### Training on GPU/CPU ###')
@@ -432,6 +434,7 @@ def main():
     fout = opts.fout
     steps = int(opts.steps)
     is_test = opts.test
+    tpu_name = opts.tpue
     print("{}\n".format(' '.join(sys.argv)))
     print("Input parameters")
     print("fdir        {}".format(fdir))
@@ -442,11 +445,12 @@ def main():
     print("dropout     {}".format(dropout))
     print("fout        {}".format(fout))
     print("steps       {}".format(steps))
+    print("TPU name    {}".format(tpu_name))
     if not classes:
         print("please setup number of trained classes")
         sys.exit(1)
     time0 = time.time()
-    train(fdir, batch_size, image_shape, classes, fout, epochs, dropout, steps, is_test)
+    train(fdir, batch_size, image_shape, classes, fout, epochs, dropout, steps, is_test, tpu_name)
     print("Elapsed time: {} sec".format(time.time()-time0))
 
 if __name__ == '__main__':
