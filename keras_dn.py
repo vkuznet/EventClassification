@@ -434,7 +434,7 @@ def main():
     fout = opts.fout
     steps = int(opts.steps)
     is_test = opts.test
-    tpu_name = opts.tpue
+    tpu_name = opts.tpu
     print("{}\n".format(' '.join(sys.argv)))
     print("Input parameters")
     print("fdir        {}".format(fdir))
