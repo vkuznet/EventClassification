@@ -79,7 +79,7 @@ class OptionParser():
             dest="steps", default=0, help="Number of steps per epoch, default 0")
         self.parser.add_argument("--test", action="store_true",
             dest="test", default=False, help="use test DenseNet model")
-        self.parser.add_argument("--tpu", action="store_true",
+        self.parser.add_argument("--tpu", action="store",
             dest="tpu", default="", help="tpu to connect")
         self.parser.add_argument("--tboard", action="store",
             dest="tboard", default="", help="Path to TensorBoard location")
