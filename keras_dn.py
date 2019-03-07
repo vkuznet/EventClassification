@@ -21,6 +21,7 @@ Additional resouces for TPU and TF datasets:
     https://www.tensorflow.org/tutorials/load_data/tf_records
 
 TensorBoard and TF profile references:
+    https://www.tensorflow.org/guide/graph_viz
     https://www.tensorflow.org/tensorboard/r2/scalars_and_keras
     https://cloud.google.com/tpu/docs/tensorboard-setup
     https://cloud.google.com/tpu/docs/cloud-tpu-tools#trace_viewer
