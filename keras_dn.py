@@ -19,6 +19,7 @@ Additional resouces for TPU and TF datasets:
     https://www.tensorflow.org/guide/datasets
     https://www.tensorflow.org/guide/performance/datasets
     https://www.tensorflow.org/tutorials/load_data/tf_records
+    https://www.tensorflow.org/tensorboard/r2/scalars_and_keras
 """
 
 # system modules
@@ -80,6 +81,8 @@ class OptionParser():
             dest="test", default=False, help="use test DenseNet model")
         self.parser.add_argument("--tpu", action="store_true",
             dest="tpu", default="", help="tpu to connect")
+        self.parser.add_argument("--tboard", action="store",
+            dest="tboard", default="", help="Path to TensorBoard location")
         self.parser.add_argument("--verbose", action="store_true",
             dest="verbose", default=False, help="verbose output")
 
@@ -296,11 +299,16 @@ def get_tfrecords(files, batch_size, shuffle=False, cache=False, tpu=False):
     return dataset
 
 def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
-        steps_per_epoch=None, is_test=False, tpu_name=''):
+        steps_per_epoch=None, is_test=False, tpu_name='', tboard=None):
     """
     Main function which does the training of our ML model either from
     images or tfrecords from provided input directory fdir.
     """
+    if tboard:
+        logdir="logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
+        with tf.Session() as sess:
+            writer = tf.summary.FileWriter(tboard, sess.graph)
 
     # input parameters
     train_dir = os.path.join(fdir, 'train')
@@ -350,6 +358,9 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
     print("validation dataset", type(validation_dataset), validation_dataset)
     print("test dataset", type(test_dataset), test_dataset)
 
+    callbacks = [lr_decay]
+    if tboard:
+        callbacks = [lr_decay, tensorboard_callback]
     if tpu: # TPU training
         # For TPU, we will need a function that returns the dataset
         training_input_fn = lambda: get_dataset(train_dir, batch_size,
@@ -364,13 +375,12 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
         fit = trained_model.fit(training_input_fn,
                 steps_per_epoch=steps_per_epoch, epochs=epochs,
                 validation_data=validation_input_fn, validation_steps=1,
-                verbose=1,
-                callbacks=[lr_decay])
+                verbose=1, callbacks=callbacks)
     else: # GPU/CPU training
         fit = trained_model.fit(training_dataset,
             steps_per_epoch=steps_per_epoch, epochs=epochs,
             validation_data=validation_dataset, validation_steps=1,
-            callbacks=[lr_decay])
+            callbacks=callbacks)
     
     print("history keys {}".format(fit.history.keys()))
 #    print("accuracy: train={} valid={}".format(fit.history['acc'], fit.history['val_acc']))
@@ -435,6 +445,7 @@ def main():
     steps = int(opts.steps)
     is_test = opts.test
     tpu_name = opts.tpu
+    tboard = opts.tboard
     print("{}\n".format(' '.join(sys.argv)))
     print("Input parameters")
     print("fdir        {}".format(fdir))
@@ -450,7 +461,7 @@ def main():
         print("please setup number of trained classes")
         sys.exit(1)
     time0 = time.time()
-    train(fdir, batch_size, image_shape, classes, fout, epochs, dropout, steps, is_test, tpu_name)
+    train(fdir, batch_size, image_shape, classes, fout, epochs, dropout, steps, is_test, tpu_name, tboard)
     print("Elapsed time: {} sec".format(time.time()-time0))
 
 if __name__ == '__main__':
