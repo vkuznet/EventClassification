@@ -305,7 +305,7 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
     images or tfrecords from provided input directory fdir.
     """
     if tboard:
-        logdir="logs/scalars/" + datetime.now().strftime("%Y%m%d-%H%M%S")
+        logdir=tboard + datetime.now().strftime("%Y%m%d-%H%M%S")
         tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=logdir)
         with tf.Session() as sess:
             writer = tf.summary.FileWriter(tboard, sess.graph)
