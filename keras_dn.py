@@ -25,6 +25,9 @@ TensorBoard and TF profile references:
     https://www.tensorflow.org/tensorboard/r2/scalars_and_keras
     https://cloud.google.com/tpu/docs/tensorboard-setup
     https://cloud.google.com/tpu/docs/cloud-tpu-tools#trace_viewer
+
+Keras and modern convnets, on TPUs
+    https://codelabs.developers.google.com/codelabs/keras-flowers-tpu/index.html?index=..%2F..index#0
 """
 
 # system modules
@@ -285,7 +288,7 @@ def get_tfrecords(files, batch_size, shuffle=False, cache=False, tpu=False):
     TF dataset which contains images and labels. The labels are converted
     from numerical values to categorical vector.
     """
-    dataset = tf.data.TFRecordDataset(files)
+    dataset = tf.data.TFRecordDataset(files, num_parallel_reads=32)
     if cache:
         # this small dataset can be entirely cached in RAM, for TPU this is important
         dataset = dataset.cache()
