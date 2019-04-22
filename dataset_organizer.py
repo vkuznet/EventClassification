@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import sys
 import shutil
@@ -23,22 +24,29 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--PATH",type=str,required=True,help="(str) path to folder with unorganized dataset")
-    parser.add_argument("--train_percent",type=float,required=True,help="(int) percentage of data to allocate to training set")
-    parser.add_argument("--valid_percent",type=float,required=True,help="(int) percentage of data to allocate to validation set")
-    parser.add_argument("--test_percent",type=float,required=True,help="(int) percentage of data to allocate to testing set")
-    parser.add_argument("--balanced",action="store_true",help="(flag) optional, whether to make dataset balanced with equal number of samples in each class")
-    parser.add_argument("--delete_excess",action="store_true",help="(flag) optional, whether to delete class folders after moving necessary files")
-    parser.add_argument("--categories",nargs="+",type=str,help="(n strings) optional, strings of folder names we will consider a class when organizig data")
+    parser.add_argument("--PATH", type=str, required=True,
+            help="(str) path to folder with unorganized dataset")
+    parser.add_argument("--train_percent", type=float, required=True,
+            help="(float) percentage (0.N) of data to allocate to training set")
+    parser.add_argument("--valid_percent", type=float, required=True,
+            help="(float) percentage (0.N) of data to allocate to validation set")
+    parser.add_argument("--test_percent", type=float, required=True,
+            help="(float) percentage (0.N) of data to allocate to testing set")
+    parser.add_argument("--balanced", action="store_true",
+            help="(flag) optional, whether to make dataset balanced with equal number of samples in each class")
+    parser.add_argument("--delete_excess", action="store_true",
+            help="(flag) optional, whether to delete class folders after moving necessary files")
+    parser.add_argument("--categories", nargs="+", type=str,
+            help="(n strings) optional, strings of folder names we will consider a class when organizig data")
 
     args = parser.parse_args()
 
     """
     Args:
         PATH (str) - path to folder with unorganized dataset
-        train_percent (int) - percentage of data to allocate to training set
-        valid_percent (int) - percentage of data to allocate to validaiton set
-        test_percent (int) - percentage of data to allocate to testing set
+        train_percent (float) - percentage of data to allocate to training set
+        valid_percent (float) - percentage of data to allocate to validaiton set
+        test_percent (float) - percentage of data to allocate to testing set
         balanced (flag) - optional, whether to make dataset balanced with equal number of samples in each class
         delete_excess (flag) - optional, whether to delete class folders after moving necessary files
         categories (n strings) - optional, strings of folder names we will consider a class when organizig data
@@ -58,7 +66,8 @@ def main():
     print("Created Folders")
     if args.balanced==True:
         #calculating smallest file numbers for balanced dataset
-        smallest = math.inf
+#        smallest = math.inf
+        smallest = 1e9
         for class_ in classes:
             smallest =  min(smallest,len(os.listdir(apath+class_)))
         train_numb,valid_numb,test_numb = split_numbs_help(smallest,args.train_percent,args.valid_percent,args.test_percent)
@@ -101,12 +110,15 @@ def create_folders(categories,PATH):
         sp.call("mkdir "+PATH+folder,shell=True)
         for category in categories:
             sp.call("mkdir "+PATH+folder+category+"/",shell=True)
-    sp.call("mkdir "+PATH+split[2],shell=True)
+#    sp.call("mkdir "+PATH+split[2],shell=True)
 
 def split_numbs_help(total, train_percent,valid_percent,test_percent):
     train_len = total*train_percent
     valid_len = total*valid_percent
     test_len  = total*test_percent
+
+    print("Splitting dataset: total=%s train=%s valid=%s test=%s"\
+            % (total, train_len, valid_len, test_len))
 
     if (total-math.floor(train_len)-math.ceil(valid_len)-math.ceil(test_len)==0):
         return math.floor(train_len),math.ceil(valid_len),math.ceil(test_len)
