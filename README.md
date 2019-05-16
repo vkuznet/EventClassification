@@ -8,9 +8,6 @@ Here are few examples of HEP events from CMS detector. Each image represents an
 event in XY, YZ, XZ views:
 ![Higgs event](doc/images/higgs.png)
 ![Jpsi event](doc/images/jpsi.png)
-![QCD event](doc/images/qcd.png)
-
-<img width="986" alt="screen shot 2018-11-12 at 3 40 05 am" src="https://user-images.githubusercontent.com/29441448/48336172-b0448f00-e62d-11e8-97e5-01c9f75a81ec.png">
 
 ### Instructions
 This repository contains:
