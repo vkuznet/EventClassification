@@ -1,7 +1,18 @@
-# Particle-Discovery
+# HEP EventClassification
 
-Everything you need to start categorizing subatomic particles! Here we have a step-by-step guide on how to go from a dataset to trained neural network with performance benchmarks. Even parallelization across multipe GPU's is supported! 
+This repository contains code and step-by-step instructions to train neural
+network on HEP images and perform Event Classification with them.
 
+### HEP images
+Here are few examples of HEP events from CMS detector. Each image represents an
+event in XY, YZ, XZ views:
+![Higgs event](doc/images/higgs.png)
+![Jpsi event](doc/images/jpsi.png)
+![QCD event](doc/images/qcd.png)
+
+<img width="986" alt="screen shot 2018-11-12 at 3 40 05 am" src="https://user-images.githubusercontent.com/29441448/48336172-b0448f00-e62d-11e8-97e5-01c9f75a81ec.png">
+
+### Instructions
 This repository contains:
 <ol type="I">
     <b>
@@ -11,20 +22,18 @@ This repository contains:
     </b>
 </ol>
 
-<img width="986" alt="screen shot 2018-11-12 at 3 40 05 am" src="https://user-images.githubusercontent.com/29441448/48336172-b0448f00-e62d-11e8-97e5-01c9f75a81ec.png">
-
 <h3> I. Dataset Organizer </h3>
 
-First, we will organize a dataset into training, validation, and testing set (skip if your data is already split as such). We take a dataset with a file structure as follows:
+We organize a dataset into training, validation, and testing set (skip if your data is already split as such). The following data structure is expected:
 ```
 data
-├── higgs 
+├── higgs
 ├── jpsi
-├── upsilon
+├── qcd
 └── etc
     └── event.png
 ```
-and use dataset_organizer.py to perform the split for us! For example, we could run the following command in the shell:
+The `dataset_organizer.py` script can be used to perform the split for us! For example, we could run the following command in the shell:
 ```
 python dataset_organizer.py --PATH /path/to/unorganized/dataset/ --train_percent .6 --valid_percent .2 --test_percent .2 --categories RelValHiggs200ChargedTaus_13 other
 ```
