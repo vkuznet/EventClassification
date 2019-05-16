@@ -99,3 +99,18 @@ RuntimeError: size mismatch, m1: [4 x 19872], m2: [2208 x 3] at /opt/conda/conda
 ```
 Which communicates to us that the correct setting is --fc_features 19872.
 
+### Training on TPUs
+Here is brief instructions how to train on TPUs. In order to train on TPUs we
+transform our image dataset into TFRecords using `img2tfrecs.py` script, e.g.
+```
+./img2tfrecs.py --fdir=<image_dir> --image-shape=300,300,3 --classes=2 --fout=tfrecord --nfiles=1000
+```
+The script expects from end-user an image directory, the image shape (default
+is 300x300x3, i.e. png image), specify number of classes, and how many
+images to pack into single tfrecord file.
+
+Then the tfrecord files should be moved to Google storage and we can perform
+training as following:
+```
+./keras_dn.py --fdir=tfrecords300 --classes=2 --epochs=1 --dropout=0.5 --fout=keras --batch_size=20 --steps=1000
+```
