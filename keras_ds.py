@@ -35,13 +35,5 @@ except ValueError:
     traceback.print_exc()
     print('### Training on GPU/CPU ###')
 
-if tpu:
-    # For TPU, we will need a function that returns the dataset
-    ds_input_fn = lambda: dataset
-    strategy = tf.contrib.tpu.TPUDistributionStrategy(tpu)
-    trained_model = tf.contrib.tpu.keras_to_tpu_model(model, strategy=strategy)
-    trained_model.fit(ds_input_fn, epochs=epochs, steps_per_epoch=steps,
-            validation_data=ds_input_fn, validation_steps=vsteps)
-else:
-    model.fit(dataset, epochs=epochs, steps_per_epoch=steps,
-            validation_data=dataset, validation_steps=vsteps)
+model.fit(dataset, epochs=epochs, steps_per_epoch=steps,
+        validation_data=dataset, validation_steps=vsteps)

@@ -347,18 +347,18 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
     # set up learning rate decay
     lr_decay = tf.keras.callbacks.LearningRateScheduler(lambda epoch: 0.0001 + 0.02 * math.pow(0.5, 1+epoch), verbose=True)
 
-    training_dataset = get_dataset(train_dir, batch_size, image_shape, classes)
-    validation_dataset = get_dataset(valid_dir, batch_size, image_shape, classes)
-    test_dataset = get_dataset(test_dir, batch_size, image_shape, classes)
+    training_dataset = get_dataset(train_dir, batch_size, image_shape, classes, tpu)
+    validation_dataset = get_dataset(valid_dir, batch_size, image_shape, classes, tpu)
+    test_dataset = get_dataset(test_dir, batch_size, image_shape, classes, tpu)
 
     try: # TPU detection
         # Picks up a connected TPU on Google's Colab, ML Engine, Kubernetes
         # and Deep Learning VMs accessed through the 'ctpu up' utility
         if tpu_name:
-            tpu = tf.contrib.cluster_resolver.TPUClusterResolver(tpu_name)
+            tpu = tf.distribute.cluster_resolver.TPUClusterResolver(tpu_name)
         else:
-            tpu = tf.contrib.cluster_resolver.TPUClusterResolver()
-        print('### Training on TPU ###')
+            tpu = tf.distribute.cluster_resolver.TPUClusterResolver()
+        print('### Training on TPU %s(%s)###' % (tpu, tpu_name))
     except ValueError:
         print('### Training on GPU/CPU ###')
         # printout how our session is configured
@@ -371,26 +371,10 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
     callbacks = [lr_decay]
     if tboard:
         callbacks = [lr_decay, tensorboard_callback]
-    if tpu: # TPU training
-        # For TPU, we will need a function that returns the dataset
-        training_input_fn = lambda: get_dataset(train_dir, batch_size,
-                image_shape, classes, tpu=True)
-        validation_input_fn = lambda: get_dataset(valid_dir, batch_size,
-                image_shape, classes, tpu=True)
-
-        strategy = tf.contrib.tpu.TPUDistributionStrategy(tpu)
-        trained_model = tf.contrib.tpu.keras_to_tpu_model(model, strategy=strategy)
-        # Work in progress: reading directly from dataset object not yet implemented
-        # for Keras/TPU. Keras/TPU needs a function that returns a dataset.
-        fit = trained_model.fit(training_input_fn,
-                steps_per_epoch=steps_per_epoch, epochs=epochs,
-                validation_data=validation_input_fn, validation_steps=1,
-                verbose=1, callbacks=callbacks)
-    else: # GPU/CPU training
-        fit = trained_model.fit(training_dataset,
-            steps_per_epoch=steps_per_epoch, epochs=epochs,
-            validation_data=validation_dataset, validation_steps=1,
-            callbacks=callbacks)
+    fit = trained_model.fit(training_dataset,
+        steps_per_epoch=steps_per_epoch, epochs=epochs,
+        validation_data=validation_dataset, validation_steps=1,
+        callbacks=callbacks)
     
     print("history keys {}".format(fit.history.keys()))
 #    print("accuracy: train={} valid={}".format(fit.history['acc'], fit.history['val_acc']))
@@ -418,10 +402,7 @@ def train(fdir, batch_size, image_shape, classes, fout, epochs=10, dropout=0.1,
             # out what to pass to predict method, and goal here is to train
             # the model which later can be used for inference
             return
-            input_fn = lambda: get_dataset(tdir, batch_size, image_shape, classes, tpu=True)
-            probs = trained_model.predict(input_fn, steps=steps)
-        else:
-            probs = trained_model.predict(tdataset, steps=steps)
+        probs = trained_model.predict(tdataset, steps=steps)
         y_pred = np.argmax(probs, axis=1)
         print("probs", type(y_true), np.shape(y_true), type(y_pred), np.shape(y_pred))
         print("y_true", y_true[:10])
